@@ -19,15 +19,30 @@ const router = express.Router();
 router.get('/:pid', (req, res) => {
   const placeId = req.params.pid;
   const place = SEED_PLACES.find(p => p.id === placeId)
-  res.json({ place });
+
+  if (!place) {
+    const error = new Error(`Place with id "${placeId}" does not exist.`);
+    error.code = 404;
+    throw error;
+  }
+  else {
+    res.json({ place });
+  }
 });
 
-router.get('/user/:uid', (req, res) => {
+router.get('/user/:uid', (req, res, next) => {
   const userId = req.params.uid;
 
   const place = SEED_PLACES.find(p => p.creator === userId);
 
-  res.json({ place });
+  if (!place) {
+    const error = new Error(`No places found for user with id "${userId}".`);
+    error.code = 404;
+    next(error);
+  }
+  else {
+    res.json({ place });
+  }
 });
 
 module.exports = router;
