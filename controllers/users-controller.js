@@ -1,5 +1,6 @@
 const HttpError = require("../models/http-error");
 const { v4: uuid } = require("uuid");
+const { validationResult } = require("express-validator");
 
 let SEED_USERS = [
   {
@@ -15,6 +16,13 @@ exports.getUsers = (req, res, next) => {
 };
 
 exports.signup = (req, res, next) => {
+  const errors = validationResult(req);
+
+  if (!errors.isEmpty()) {
+    console.log(errors);
+    throw new HttpError("Invalid inputs passed. Please check your data.", 422);
+  }
+
   const { name, email, password } = req.body;
   const userIndex = SEED_USERS.findIndex((u) => u.email === email);
 

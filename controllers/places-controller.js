@@ -1,5 +1,6 @@
 const HttpError = require("../models/http-error");
 const { v4: uuid } = require("uuid");
+const { validationResult } = require("express-validator");
 
 let SEED_PLACES = [
   {
@@ -38,6 +39,13 @@ exports.getPlacesByUserId = (req, res, next) => {
 };
 
 exports.createPlace = (req, res, next) => {
+  const errors = validationResult(req);
+
+  if (!errors.isEmpty()) {
+    console.log(errors);
+    throw new HttpError("Invalid inputs passed. Please check your data.", 422);
+  }
+
   const { title, description, coordinates, address, creator } = req.body;
   const newPlace = {
     id: uuid(),
@@ -52,6 +60,13 @@ exports.createPlace = (req, res, next) => {
 };
 
 exports.updatePlace = (req, res, next) => {
+  const errors = validationResult(req);
+
+  if (!errors.isEmpty()) {
+    console.log(errors);
+    throw new HttpError("Invalid inputs passed. Please check your data.", 422);
+  }
+
   const { title, description } = req.body;
   const placeId = req.params.pid;
   const placeIndex = SEED_PLACES.findIndex((p) => p.id === placeId);
