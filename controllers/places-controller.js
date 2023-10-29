@@ -1,6 +1,7 @@
 const HttpError = require("../models/http-error");
 const { v4: uuid } = require("uuid");
 const { validationResult } = require("express-validator");
+const { getCoordsForAddress } = require("../util/location");
 
 let SEED_PLACES = [
   {
@@ -38,25 +39,35 @@ exports.getPlacesByUserId = (req, res, next) => {
   }
 };
 
-exports.createPlace = (req, res, next) => {
+exports.createPlace = async (req, res, next) => {
   const errors = validationResult(req);
 
   if (!errors.isEmpty()) {
     console.log(errors);
-    throw new HttpError("Invalid inputs passed. Please check your data.", 422);
-  }
+    next(new HttpError("Invalid inputs passed. Please check your data.", 422));
+  } else {
+    const { title, description, address, creator } = req.body;
 
-  const { title, description, coordinates, address, creator } = req.body;
-  const newPlace = {
-    id: uuid(),
-    title,
-    description,
-    coordinates,
-    address,
-    creator,
-  };
-  SEED_PLACES.push(newPlace);
-  res.json(newPlace);
+    let coordinates;
+
+    try {
+      coordinates = await getCoordsForAddress(address);
+    } catch (error) {
+      return next(error);
+    }
+
+    const newPlace = {
+      id: uuid(),
+      title,
+      description,
+      coordinates,
+      address,
+      creator,
+    };
+
+    SEED_PLACES.push(newPlace);
+    res.json(newPlace);
+  }
 };
 
 exports.updatePlace = (req, res, next) => {
@@ -86,6 +97,11 @@ exports.updatePlace = (req, res, next) => {
 
 exports.deletePlace = (req, res, next) => {
   const placeId = req.params.pid;
-  SEED_PLACES = SEED_PLACES.filter((p) => p.id !== placeId);
-  res.status(200).json({ message: "Deleted place." });
+
+  if (!SEED_PLACES.find((p) => p.id !== placeId)) {
+    next(new HttpError(`No places found for place with id "${placeId}".`, 404));
+  } else {
+    SEED_PLACES = SEED_PLACES.filter((p) => p.id !== placeId);
+    res.status(200).json({ message: "Deleted place." });
+  }
 };
