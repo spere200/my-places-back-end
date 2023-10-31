@@ -163,15 +163,24 @@ exports.deletePlace = async (req, res, next) => {
   let place;
 
   try {
-    place = await Place.findById(placeId);
+    place = await Place.findById(placeId).populate("creator");
   } catch (error) {
     return next(
       new HttpError("Something went wrong while finding the place.", 500)
     );
   }
 
+  if (!place) {
+    return next(new HttpError("No place was found for the given ID.", 500));
+  }
+
   try {
-    await place.deleteOne();
+    const sess = await mongoose.startSession();
+    sess.startTransaction();
+    await place.deleteOne({ session: sess });
+    place.creator.places.pull(place);
+    await place.creator.save({ session: sess });
+    await sess.commitTransaction();
   } catch (error) {
     return next(
       new HttpError("Something went wrong while deleting the place.", 500)
