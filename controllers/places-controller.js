@@ -1,9 +1,10 @@
-const { v4: uuid } = require("uuid");
+const mongoose = require("mongoose");
 const { validationResult } = require("express-validator");
 
 const HttpError = require("../models/http-error");
 const { getCoordsForAddress } = require("../util/location");
 const Place = require("../models/place");
+const User = require("../models/user");
 
 exports.getPlaceById = async (req, res) => {
   const placeId = req.params.pid;
@@ -79,15 +80,39 @@ exports.createPlace = async (req, res, next) => {
       creator,
     });
 
+    let user;
+
     try {
-      await newPlace.save();
+      user = await User.findById(creator);
     } catch (error) {
       return next(
-        new HttpError("Failed to create place. Try again.\n" + error, 500)
+        new HttpError(
+          "Could not create place. Something went wrong while retreiving user information.\n" +
+            error,
+          500
+        )
       );
     }
 
-    res.status(200).json(newPlace);
+    if (!user) {
+      return next(
+        new HttpError("Could not find a user for the provided user ID.", 500)
+      );
+    }
+
+    try {
+      const sess = await mongoose.startSession();
+      sess.startTransaction();
+      await newPlace.save({ session: sess });
+      user.places.push(newPlace);
+      await user.save({ session: sess });
+      await sess.commitTransaction();
+    } catch (error) {
+      console.log(error);
+      return next(new HttpError("Failed to create place. Try again.", 500));
+    }
+
+    res.status(200).json({ place: newPlace.toObject({ getters: true }) });
   }
 };
 
