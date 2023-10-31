@@ -4,60 +4,92 @@ const { validationResult } = require("express-validator");
 const HttpError = require("../models/http-error");
 const User = require("../models/user");
 
-let SEED_USERS = [
-  {
-    id: "u1",
-    name: "John Doe",
-    email: "test@test.com",
-    password: "test",
-  },
-];
+exports.getUsers = async (req, res, next) => {
+  let users;
 
-exports.getUsers = (req, res, next) => {
-  res.json({ users: SEED_USERS });
+  try {
+    users = await User.find({}, '-password').exec();
+  } catch (error) {
+    return next(new HttpError("Failed to retrieve user list. Try again.", 500));
+  }
+
+  res.json({ users: users.map((user) => user.toObject({ getters: true })) });
 };
 
-exports.signup = (req, res, next) => {
+exports.signup = async (req, res, next) => {
   const errors = validationResult(req);
 
   if (!errors.isEmpty()) {
     console.log(errors);
-    throw new HttpError("Invalid inputs passed. Please check your data.", 422);
+    return next(
+      new HttpError("Invalid inputs passed. Please check your data.", 422)
+    );
   }
 
-  const { name, email, password } = req.body;
-  const userIndex = SEED_USERS.findIndex((u) => u.email === email);
+  const { name, email, password, places } = req.body;
 
-  if (userIndex >= 0) {
-    next(
+  let existingUser;
+
+  try {
+    existingUser = await User.findOne({ email: email }).exec();
+  } catch (error) {
+    return next(new HttpError("Signup failed. Please try again.", 500));
+  }
+
+  if (existingUser) {
+    return next(
       new HttpError(
-        "The entered email is already in use. Try again, or recover your password.",
+        "That email is already in use by an existing account. Try another or recover your password.",
         500
       )
     );
-  } else {
-    const newUser = { id: uuid(), name, email, password };
-    SEED_USERS.push(newUser);
-    res.status(201).json(newUser);
   }
+
+  const newUser = new User({
+    name,
+    email,
+    image:
+      "https://images.pexels.com/photos/839011/pexels-photo-839011.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=750&w=1260",
+    password,
+    places,
+  });
+
+  try {
+    await newUser.save();
+  } catch (error) {
+    console.log(error);
+    return next(new HttpError("Account creation failed. Try again.", 500));
+  }
+
+  res.status(201).json({
+    message: "Successfully created user.",
+    user: newUser.toObject({ getters: true }),
+  });
 };
 
-exports.login = (req, res, next) => {
+exports.login = async (req, res, next) => {
   const { email, password } = req.body;
-  const user = SEED_USERS.find((u) => u.email === email);
+
+  let user;
+
+  try {
+    user = await User.findOne({ email }).exec();
+  } catch (error) {
+    return next(new HttpError("Login failed. Please try again.", 401));
+  }
 
   if (!user) {
-    next(
+    return next(
       new HttpError(
-        "The entered email and password combination is not valid.",
+        "No account was found for the entered email. Sign up instead.",
         401
       )
     );
-  } else {
-    if (password === user.password) {
-      res.json({ message: "Logged in as " + user.name });
-    } else {
-      next(new HttpError("The entered password is incorrect.", 401));
-    }
   }
+
+  if (user.password !== password) {
+    return next(new HttpError("Incorrect password.", 401));
+  }
+
+  res.status(201).json({ message: `Successfully logged in as ${user.name}.` });
 };

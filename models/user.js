@@ -12,10 +12,14 @@ const userSchema = Schema({
     required: true,
     unique: true,
   },
+  image: {
+    type: String,
+    required: true,
+  },
   password: {
     type: String,
     required: true,
-    minlength: 6,
+    minlength: 4,
   },
   places: {
     type: String,
