@@ -1,7 +1,9 @@
-const HttpError = require("../models/http-error");
 const { v4: uuid } = require("uuid");
 const { validationResult } = require("express-validator");
+
+const HttpError = require("../models/http-error");
 const { getCoordsForAddress } = require("../util/location");
+const Place = require("../models/place");
 
 let SEED_PLACES = [
   {
@@ -17,26 +19,56 @@ let SEED_PLACES = [
   },
 ];
 
-exports.getPlaceById = (req, res) => {
+exports.getPlaceById = async (req, res) => {
   const placeId = req.params.pid;
-  const place = SEED_PLACES.find((p) => p.id === placeId);
+
+  let place;
+
+  try {
+    place = await Place.findById(placeId).exec();
+  } catch (error) {
+    return next(
+      new HttpError(
+        "Something went wrong while connecting to the database.",
+        404
+      )
+    );
+  }
 
   if (!place) {
-    throw new HttpError(`Place with id "${placeId}" does not exist.`, 404);
-  } else {
-    res.json({ place });
+    return next(
+      new HttpError(`Could not find a place with id ${placeId}.`, 404)
+    );
   }
+
+  res.json({ place: place.toObject({ getters: true }) });
 };
 
-exports.getPlacesByUserId = (req, res, next) => {
+exports.getPlacesByUserId = async (req, res, next) => {
   const userId = req.params.uid;
-  const places = SEED_PLACES.filter((p) => p.creator === userId);
 
-  if (!places) {
-    next(new HttpError(`No places found for user with id "${userId}".`, 404));
-  } else {
-    res.json({ places });
+  let places;
+
+  try {
+    places = await Place.find({ creator: userId }).exec();
+  } catch (error) {
+    return next(
+      new HttpError(
+        "Something went wrong while connecting to the database.",
+        404
+      )
+    );
   }
+
+  if (!places || places.length === 0) {
+    return next(
+      new HttpError(`No places found for user with id "${userId}".`, 404)
+    );
+  }
+
+  res.json({
+    places: places.map((place) => place.toObject({ getters: true })),
+  });
 };
 
 exports.createPlace = async (req, res, next) => {
@@ -56,16 +88,24 @@ exports.createPlace = async (req, res, next) => {
       return next(error);
     }
 
-    const newPlace = {
-      id: uuid(),
+    const newPlace = new Place({
       title,
       description,
-      coordinates,
       address,
+      location: coordinates,
+      image:
+        "https://upload.wikimedia.org/wikipedia/commons/thumb/d/df/NYC_Empire_State_Building.jpg/640px-NYC_Empire_State_Building.jpg",
       creator,
-    };
+    });
 
-    SEED_PLACES.push(newPlace);
+    try {
+      await newPlace.save();
+    } catch (error) {
+      return next(
+        new HttpError("Failed to create place. Try again.\n" + error, 500)
+      );
+    }
+
     res.json(newPlace);
   }
 };
@@ -83,16 +123,18 @@ exports.updatePlace = (req, res, next) => {
   const placeIndex = SEED_PLACES.findIndex((p) => p.id === placeId);
 
   if (placeIndex < 0) {
-    next(new HttpError(`No places found for place with id "${placeId}".`, 404));
-  } else {
-    const updatedPlace = { ...SEED_PLACES[placeIndex], title, description };
-    SEED_PLACES[placeIndex] = updatedPlace;
-
-    res.json({
-      message: `Updated place with id ${placeId}`,
-      update: SEED_PLACES[placeIndex],
-    });
+    return next(
+      new HttpError(`No places found for place with id "${placeId}".`, 404)
+    );
   }
+  
+  const updatedPlace = { ...SEED_PLACES[placeIndex], title, description };
+  SEED_PLACES[placeIndex] = updatedPlace;
+
+  res.json({
+    message: `Updated place with id ${placeId}`,
+    update: SEED_PLACES[placeIndex],
+  });
 };
 
 exports.deletePlace = (req, res, next) => {
