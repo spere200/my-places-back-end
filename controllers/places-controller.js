@@ -5,20 +5,6 @@ const HttpError = require("../models/http-error");
 const { getCoordsForAddress } = require("../util/location");
 const Place = require("../models/place");
 
-let SEED_PLACES = [
-  {
-    id: "p1",
-    title: "Empire State Building",
-    description: "One of the most famous sky scrapers in the world!",
-    location: {
-      lat: 40.7484474,
-      lng: -73.9871516,
-    },
-    address: "20 W 34th St, New York, NY 10001",
-    creator: "u1",
-  },
-];
-
 exports.getPlaceById = async (req, res) => {
   const placeId = req.params.pid;
 
@@ -27,12 +13,7 @@ exports.getPlaceById = async (req, res) => {
   try {
     place = await Place.findById(placeId).exec();
   } catch (error) {
-    return next(
-      new HttpError(
-        "Something went wrong while connecting to the database.",
-        404
-      )
-    );
+    return next(new HttpError("Something went wrong.", 404));
   }
 
   if (!place) {
@@ -41,7 +22,7 @@ exports.getPlaceById = async (req, res) => {
     );
   }
 
-  res.json({ place: place.toObject({ getters: true }) });
+  res.status(200).json({ place: place.toObject({ getters: true }) });
 };
 
 exports.getPlacesByUserId = async (req, res, next) => {
@@ -66,7 +47,7 @@ exports.getPlacesByUserId = async (req, res, next) => {
     );
   }
 
-  res.json({
+  res.status(200).json({
     places: places.map((place) => place.toObject({ getters: true })),
   });
 };
@@ -106,11 +87,11 @@ exports.createPlace = async (req, res, next) => {
       );
     }
 
-    res.json(newPlace);
+    res.status(200).json(newPlace);
   }
 };
 
-exports.updatePlace = (req, res, next) => {
+exports.updatePlace = async (req, res, next) => {
   const errors = validationResult(req);
 
   if (!errors.isEmpty()) {
@@ -120,30 +101,59 @@ exports.updatePlace = (req, res, next) => {
 
   const { title, description } = req.body;
   const placeId = req.params.pid;
-  const placeIndex = SEED_PLACES.findIndex((p) => p.id === placeId);
 
-  if (placeIndex < 0) {
+  let place;
+
+  try {
+    place = await Place.findById(placeId);
+  } catch (error) {
     return next(
-      new HttpError(`No places found for place with id "${placeId}".`, 404)
+      new HttpError("Something went wrong while trying to update place", 500)
     );
   }
-  
-  const updatedPlace = { ...SEED_PLACES[placeIndex], title, description };
-  SEED_PLACES[placeIndex] = updatedPlace;
 
-  res.json({
+  place.title = title;
+  place.description = description;
+
+  try {
+    await place.save();
+  } catch (error) {
+    return next(
+      new HttpError(
+        "Something went wrong while trying to save the updated place.",
+        500
+      )
+    );
+  }
+
+  res.status(200).json({
     message: `Updated place with id ${placeId}`,
-    update: SEED_PLACES[placeIndex],
+    place: place.toObject({ getters: true }),
   });
 };
 
-exports.deletePlace = (req, res, next) => {
+exports.deletePlace = async (req, res, next) => {
   const placeId = req.params.pid;
 
-  if (!SEED_PLACES.find((p) => p.id !== placeId)) {
-    next(new HttpError(`No places found for place with id "${placeId}".`, 404));
-  } else {
-    SEED_PLACES = SEED_PLACES.filter((p) => p.id !== placeId);
-    res.status(200).json({ message: "Deleted place." });
+  let place;
+
+  try {
+    place = await Place.findById(placeId);
+  } catch (error) {
+    return next(
+      new HttpError("Something went wrong while finding the place.", 500)
+    );
   }
+
+  try {
+    await place.deleteOne();
+  } catch (error) {
+    return next(
+      new HttpError("Something went wrong while deleting the place.", 500)
+    );
+  }
+
+  res.status(200).json({
+    message: `Successfully deleted place.`,
+  });
 };
