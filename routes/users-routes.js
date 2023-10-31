@@ -5,6 +5,7 @@ const { check } = require("express-validator");
 const router = express.Router();
 
 router.get("/", userController.getUsers);
+
 router.post(
   "/signup",
   [

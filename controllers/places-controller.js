@@ -16,7 +16,7 @@ exports.getPlaceById = async (req, res) => {
   } catch (error) {
     return next(new HttpError("Something went wrong.", 404));
   }
-
+  
   if (!place) {
     return next(
       new HttpError(`Could not find a place with id ${placeId}.`, 404)
@@ -29,28 +29,23 @@ exports.getPlaceById = async (req, res) => {
 exports.getPlacesByUserId = async (req, res, next) => {
   const userId = req.params.uid;
 
-  let places;
+  let user;
 
   try {
-    places = await Place.find({ creator: userId }).exec();
+    user = await User.findById(userId).populate("places").exec();
   } catch (error) {
     return next(
-      new HttpError(
-        "Something went wrong while connecting to the database.",
-        404
-      )
+      new HttpError("Something went wrong while trying to retrieve data.", 404)
     );
   }
 
-  if (!places || places.length === 0) {
-    return next(
-      new HttpError(`No places found for user with id "${userId}".`, 404)
-    );
+  if (!user || user.places.length === 0) {
+    return next(new HttpError("No places found for this user.", 404));
   }
 
-  res.status(200).json({
-    places: places.map((place) => place.toObject({ getters: true })),
-  });
+  res
+    .status(200)
+    .json({ places: user.places.map((p) => p.toObject({ getters: true })) });
 };
 
 exports.createPlace = async (req, res, next) => {
