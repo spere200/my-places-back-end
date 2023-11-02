@@ -91,5 +91,8 @@ exports.login = async (req, res, next) => {
     return next(new HttpError("Incorrect password.", 401));
   }
 
-  res.status(201).json({ message: `Successfully logged in as ${user.name}.` });
+  res.status(201).json({
+    message: `Successfully logged in as ${user.name}.`,
+    user: user.toObject({ getters: true }),
+  });
 };

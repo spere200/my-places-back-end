@@ -16,7 +16,7 @@ exports.getPlaceById = async (req, res) => {
   } catch (error) {
     return next(new HttpError("Something went wrong.", 404));
   }
-  
+
   if (!place) {
     return next(
       new HttpError(`Could not find a place with id ${placeId}.`, 404)
