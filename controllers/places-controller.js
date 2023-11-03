@@ -62,7 +62,12 @@ exports.createPlace = async (req, res, next) => {
     try {
       coordinates = await getCoordsForAddress(address);
     } catch (error) {
-      return next(error);
+      next(
+        new HttpError(
+          "Could not generate coordinates. Verify address and try again.",
+          500
+        )
+      );
     }
 
     const newPlace = new Place({
