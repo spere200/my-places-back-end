@@ -25,6 +25,8 @@ exports.signup = async (req, res, next) => {
     );
   }
 
+  // this can be kept the same since multer also adds a body the same way
+  // application/json content type does
   const { name, email, password } = req.body;
 
   let existingUser;
@@ -44,11 +46,12 @@ exports.signup = async (req, res, next) => {
     );
   }
 
+  // since multer adds a req.file object that has a path set in the configuration,
+  // the user image can now be stored with the appropriate url
   const newUser = new User({
     name,
     email,
-    image:
-      "https://images.pexels.com/photos/839011/pexels-photo-839011.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=750&w=1260",
+    image: req.file.path,
     password,
     places: [],
   });

@@ -1,4 +1,5 @@
 const fs = require("fs");
+const path = require("path");
 require("dotenv").config();
 
 const express = require("express");
@@ -13,6 +14,12 @@ const HttpError = require("./models/http-error");
 const app = express();
 
 app.use(bodyParser.json());
+
+// this is static serving, which means any request which starts with the string
+// in the first parameter is handled by the static middleware returned by
+// express static, which given a valid filesystem path, returns any file
+// in that path by name
+app.use("/uploads/images", express.static(path.join("uploads", "images")));
 
 app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
