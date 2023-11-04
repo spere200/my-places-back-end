@@ -1,3 +1,4 @@
+const fs = require("fs");
 require("dotenv").config();
 
 const express = require("express");
@@ -33,6 +34,19 @@ app.use((req, res, next) => {
 });
 
 app.use((error, req, res, next) => {
+  // if we hit this middleware there was an error somewhere along the way, so we can use
+  // this to rollback the image upload if something went wrong
+
+  // the file field is added by multer, and if it's set that means the invalid request
+  // involved an image
+  if (req.file) {
+    // default API, unlink removes a file given it's path and calls a callback once
+    // finished that automatically has an error set in case something went wrong
+    fs.unlink(req.file.path, (err) => {
+      console.log(err);
+    });
+  }
+
   if (res.headerSent) {
     return next(error);
   }
