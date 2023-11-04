@@ -39,8 +39,8 @@ exports.getPlacesByUserId = async (req, res, next) => {
     );
   }
 
-  if (!user || user.places.length === 0) {
-    return next(new HttpError("No places found for this user.", 404));
+  if (!user) {
+    return next(new HttpError("User does not exist.", 404));
   }
 
   res
