@@ -50,7 +50,10 @@ app.use((error, req, res, next) => {
     // default API, unlink removes a file given it's path and calls a callback once
     // finished that automatically has an error set in case something went wrong
     fs.unlink(req.file.path, (err) => {
-      console.log(err);
+      if (err) {
+        console.log("Failed to remove image from back-end storage.");
+        console.log(err);
+      }
     });
   }
 
