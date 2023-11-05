@@ -1,5 +1,6 @@
 const { validationResult } = require("express-validator");
 const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
 
 const HttpError = require("../models/http-error");
 const User = require("../models/user");
@@ -74,9 +75,22 @@ exports.signup = async (req, res, next) => {
     return next(new HttpError("Account creation failed. Try again.", 500));
   }
 
+  let token;
+
+  try {
+    token = jwt.sign(
+      { userId: newUser.id, email: newUser.email },
+      process.env.SECRET,
+      { expiresIn: "1h" }
+    );
+  } catch (err) {
+    console.log(err);
+    return next(new HttpError("Account creation failed. Try again.", 500));
+  }
+
   res.status(201).json({
     message: "Successfully created user.",
-    user: newUser.toObject({ getters: true }),
+    user: { id: newUser.id, email: newUser.email, token },
   });
 };
 
@@ -117,8 +131,21 @@ exports.login = async (req, res, next) => {
     return next(new HttpError("Invalid credentials.", 401));
   }
 
+  let token;
+
+  try {
+    token = jwt.sign(
+      { userId: user.id, email: user.email },
+      process.env.SECRET,
+      { expiresIn: "1h" }
+    );
+  } catch (err) {
+    console.log(err);
+    return next(new HttpError("Account creation failed. Try again.", 500));
+  }
+
   res.status(201).json({
     message: `Successfully logged in as ${user.name}.`,
-    user: user.toObject({ getters: true }),
+    user: { id: user.id, email: user.email, token },
   });
 };

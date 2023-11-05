@@ -58,6 +58,8 @@ exports.createPlace = async (req, res, next) => {
   } else {
     const { title, description, address, creator } = req.body;
 
+    console.log(req.body)
+
     let coordinates;
 
     try {
