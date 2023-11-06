@@ -4,6 +4,9 @@ const jwt = require("jsonwebtoken");
 const HttpError = require("../models/http-error");
 
 module.exports = (req, res, next) => {
+  // some browsers send an OPTIONS request as a safety measure to ensure that
+  // the request being sent is trusted, this skips it since OPTIONS requests
+  // won't have a token attached
   if (req.method === "OPTIONS") {
     return next();
   }
@@ -20,6 +23,12 @@ module.exports = (req, res, next) => {
     req.userData = { id: decodedToken.userId };
     next();
   } catch (err) {
-    return next(new HttpError("You do not have permission to do that.", 401));
+    console.log(err);
+    return next(
+      new HttpError(
+        "Something went wrong while verifying your stored credentials. Try logging in again.",
+        401
+      )
+    );
   }
 };

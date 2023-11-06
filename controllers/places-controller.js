@@ -58,7 +58,7 @@ exports.createPlace = async (req, res, next) => {
   } else {
     const { title, description, address, creator } = req.body;
 
-    console.log(req.body)
+    console.log(req.body);
 
     let coordinates;
 
@@ -139,6 +139,17 @@ exports.updatePlace = async (req, res, next) => {
     );
   }
 
+  // place.creator has to be converted to a string since it's currently a mongoose ObjectId,
+  // and since it hasn't been populated it's just an ObjectId("id")
+  if (place.creator.toString() !== req.userData.id) {
+    return next(
+      new HttpError(
+        "Permission denied. This place can only be edited by its creator.",
+        401
+      )
+    );
+  }
+
   place.title = title;
   place.description = description;
 
@@ -174,6 +185,19 @@ exports.deletePlace = async (req, res, next) => {
 
   if (!place) {
     return next(new HttpError("No place was found for the given ID.", 500));
+  }
+
+  // since in this request the creator field is populated, it now returns the
+  // actual creator object, not just it's ObjectId, so now to get the id
+  // you have to reference the actual _id field in the creator document,
+  // which can just be invoked with id since that's a getter in the model
+  if (place.creator.id.toString() !== req.userData.id) {
+    return next(
+      new HttpError(
+        "Permission denied. This place can only be deleted by its creator.",
+        401
+      )
+    );
   }
 
   const imagePath = place.image;
