@@ -56,7 +56,7 @@ exports.createPlace = async (req, res, next) => {
     console.log(errors);
     next(new HttpError("Invalid inputs passed. Please check your data.", 422));
   } else {
-    const { title, description, address, creator } = req.body;
+    const { title, description, address } = req.body;
 
     console.log(req.body);
 
@@ -79,13 +79,13 @@ exports.createPlace = async (req, res, next) => {
       address,
       location: coordinates,
       image: req.file.path,
-      creator,
+      creator: req.userData.id,
     });
 
     let user;
 
     try {
-      user = await User.findById(creator);
+      user = await User.findById(req.userData.id);
     } catch (error) {
       return next(
         new HttpError(
