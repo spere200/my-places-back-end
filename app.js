@@ -69,5 +69,5 @@ mongoose
   .connect(
     `mongodb+srv://${process.env.MERN_USER}:${process.env.MERN_PASSWORD}@cluster0.qke1ugj.mongodb.net/${process.env.MERN_DB_NAME}?retryWrites=true&w=majority`
   )
-  .then(() => app.listen(5000))
+  .then(() => app.listen(process.env.PORT || 5000))
   .catch((error) => console.log(error));
