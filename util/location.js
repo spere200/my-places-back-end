@@ -1,3 +1,7 @@
+if (process.env.NODE_ENV !== "production") {
+  require("dotenv").config();
+}
+
 const axios = require("axios");
 const HttpError = require("../models/http-error");
 
@@ -22,4 +26,4 @@ exports.getCoordsForAddress = async (address) => {
   const coordinates = data.results[0].geometry.location;
 
   return coordinates;
-}
+};
