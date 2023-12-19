@@ -1,6 +1,7 @@
 const fs = require("fs");
 const mongoose = require("mongoose");
 const { validationResult } = require("express-validator");
+const { cloudinary } = require("../cloudinary");
 
 const HttpError = require("../models/http-error");
 const { getCoordsForAddress } = require("../util/location");
@@ -198,7 +199,9 @@ exports.deletePlace = async (req, res, next) => {
     );
   }
 
-  const imagePath = place.image;
+  const temp = place.image.split("/");
+  let imageId = temp[temp.length - 2] + "/" + temp[temp.length - 1]
+  imageId = imageId.split(".")[0]
 
   try {
     const sess = await mongoose.startSession();
@@ -213,12 +216,14 @@ exports.deletePlace = async (req, res, next) => {
     );
   }
 
-  fs.unlink(imagePath, (err) => {
-    if (err) {
-      console.log("Failed to remove image from back-end storage.");
-      console.log(err);
-    }
-  });
+  try {
+    cloudinary.uploader.destroy(imageId, function (error, result) {
+      // console.log(result);
+      console.log(`Successfully removed ${imageId} from Cloudinary.`)
+    });
+  } catch (e) {
+    console.log("Failed to remove place image from cloudinary.");
+  }
 
   res.status(200).json({
     message: `Successfully deleted place.`,
